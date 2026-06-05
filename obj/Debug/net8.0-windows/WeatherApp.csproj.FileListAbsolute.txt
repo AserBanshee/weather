@@ -1,0 +1,6 @@
+D:\WeatherApp\obj\Debug\net8.0-windows\WeatherApp.csproj.AssemblyReference.cache
+D:\WeatherApp\obj\Debug\net8.0-windows\App.baml
+D:\WeatherApp\obj\Debug\net8.0-windows\App.g.cs
+D:\WeatherApp\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
+D:\WeatherApp\obj\Debug\net8.0-windows\WeatherApp_MarkupCompile.cache
+D:\WeatherApp\obj\Debug\net8.0-windows\WeatherApp_MarkupCompile.lref
