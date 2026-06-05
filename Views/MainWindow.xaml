@@ -1,0 +1,503 @@
+<Window x:Class="WeatherApp.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+        xmlns:converters="clr-namespace:WeatherApp.Converters"
+        Title="WeatherView — Погодный монитор" 
+        Height="820" Width="1300"
+        MinHeight="700" MinWidth="1100"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <converters:TemperatureColorConverter x:Key="TempColor"/>
+        <converters:DateToDayNameConverter x:Key="DateToDay"/>
+        <converters:PrecipitationConverter x:Key="PrecipFormat"/>
+        <converters:TemperatureFormatConverter x:Key="TempFormat"/>
+    </Window.Resources>
+
+    <Window.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0A0F1A" Offset="0"/>
+            <GradientStop Color="#071018" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Background>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="260"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ═══ LEFT SIDEBAR ═══ -->
+        <Border Grid.Column="0" Background="#080D15"
+                BorderBrush="#1E3A5F" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- App Logo -->
+                <Border Grid.Row="0" Padding="20,24,20,16">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🌤" FontSize="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="WeatherView" FontSize="19" FontWeight="SemiBold"
+                                       Foreground="#ECEFF1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="Мониторинг погоды в реальном времени"
+                                   FontSize="10" Foreground="#37474F" Margin="34,2,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Search Block -->
+                <StackPanel Grid.Row="1" Margin="16,0,16,20">
+                    <TextBlock Text="ПОИСК ГОРОДА" FontSize="9" FontWeight="SemiBold"
+                               Foreground="#37474F" Margin="2,0,0,8" LetterSpacing="1"/>
+                    <TextBox Style="{StaticResource SearchBox}"
+                             Text="{Binding CityInput, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,0,8"
+                             FontSize="13">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding SearchCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Style="{StaticResource ActionButton}"
+                                Command="{Binding SearchCommand}"
+                                FontSize="13" Height="36" Content="Найти"/>
+                        <Button Grid.Column="2" Style="{StaticResource ActionButton}"
+                                Command="{Binding AddCityCommand}"
+                                ToolTip="Добавить город в список"
+                                Height="36" FontSize="16" Content="+"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Cities List -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16,0,16,0">
+                        <TextBlock Text="МОИ ГОРОДА" FontSize="9" FontWeight="SemiBold"
+                                   Foreground="#37474F" Margin="2,0,0,10" LetterSpacing="1"/>
+                        <ItemsControl ItemsSource="{Binding SavedCities}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="28"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0"
+                                                Style="{StaticResource CityButton}"
+                                                Command="{Binding DataContext.SelectCityCommand, 
+                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                HorizontalContentAlignment="Left">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="📍" FontSize="11" Margin="0,0,7,0"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding}" FontSize="13"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1"
+                                                Background="Transparent" BorderThickness="0"
+                                                Foreground="#37474F" Padding="4"
+                                                Cursor="Hand" FontSize="12"
+                                                Command="{Binding DataContext.RemoveCityCommand, 
+                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                Content="✕"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Bottom Panel -->
+                <StackPanel Grid.Row="3" Margin="16,8,16,20">
+                    <Separator Background="#1E3A5F" Margin="0,0,0,12"/>
+                    <TextBlock Text="{Binding LastUpdatedText}" FontSize="10"
+                               Foreground="#37474F" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <Button Style="{StaticResource CityButton}"
+                            Command="{Binding RefreshCommand}"
+                            HorizontalContentAlignment="Center" Height="34">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="↻" FontSize="15" Margin="0,0,6,0"/>
+                            <TextBlock Text="Обновить данные" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ MAIN CONTENT ═══ -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="24,24,24,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Loading -->
+                <Border Grid.RowSpan="4" Panel.ZIndex="99"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+                    <Border.Background>
+                        <SolidColorBrush Color="#0A0F1A" Opacity="0.85"/>
+                    </Border.Background>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="⟳" FontSize="56" Foreground="#4FC3F7" 
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Загружаем погодные данные..." 
+                                   FontSize="15" Foreground="#546E7A"
+                                   HorizontalAlignment="Center" Margin="0,14,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Error -->
+                <Border Grid.Row="0"
+                        Background="#160808" BorderBrush="#C62828"
+                        BorderThickness="1" CornerRadius="12"
+                        Padding="20,14" Margin="0,0,0,16"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⚠️" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ErrorMessage}" Foreground="#EF9A9A"
+                                   FontSize="14" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Welcome hint when no city selected -->
+                <Border Grid.Row="1"
+                        Visibility="{Binding IsEmptyState, Converter={StaticResource BoolToVis}}"
+                        Padding="40">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="🌍" FontSize="64" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Введите название города" FontSize="20"
+                                   Foreground="#546E7A" HorizontalAlignment="Center" Margin="0,16,0,8"/>
+                        <TextBlock Text="для получения актуальной погоды" FontSize="14"
+                                   Foreground="#37474F" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── CURRENT WEATHER + SIDE STATS ── -->
+                <Grid Grid.Row="1" Margin="0,0,0,20"
+                      Visibility="{Binding HasData, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="300"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Main Card -->
+                    <Border Grid.Column="0" Style="{StaticResource WeatherCard}">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#0D1B2A" Offset="0"/>
+                                <GradientStop Color="#091420" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- City -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding CurrentCityName}"
+                                           FontSize="22" FontWeight="SemiBold" Foreground="#ECEFF1"/>
+                                <TextBlock Text=" · " Foreground="#37474F" FontSize="22"/>
+                                <TextBlock Text="{Binding CountryCode}"
+                                           FontSize="18" Foreground="#546E7A" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Temp + Emoji -->
+                            <Grid Grid.Row="1" Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock FontSize="84" FontWeight="Light" LineHeight="84"
+                                               Foreground="{Binding Temperature, Converter={StaticResource TempColor}}">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="{}{0:0.#}°C">
+                                                <Binding Path="Temperature"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding WeatherDescription}" FontSize="17"
+                                               Foreground="#78909C" Margin="0,6,0,0"/>
+                                    <TextBlock FontSize="12" Foreground="#546E7A" Margin="0,8,0,0">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="Ощущается как {0:+0.#;-0.#;0}°  ·  от {1:0.#}° до {2:0.#}°">
+                                                <Binding Path="FeelsLike"/>
+                                                <Binding Path="TempMin"/>
+                                                <Binding Path="TempMax"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding WeatherEmoji}"
+                                           FontSize="80" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            </Grid>
+
+                            <!-- Stats Row -->
+                            <UniformGrid Grid.Row="2" Rows="1" Columns="4">
+                                <StackPanel Margin="0,0,4,0">
+                                    <Border BorderBrush="#1E3A5F" BorderThickness="0,1,0,0" Padding="8,14,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="🌬" FontSize="20" HorizontalAlignment="Center"/>
+                                            <TextBlock FontSize="14" Foreground="#ECEFF1"
+                                                       HorizontalAlignment="Center" Margin="0,6,0,2">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0:0.#} м/с {1}">
+                                                        <Binding Path="WindSpeed"/>
+                                                        <Binding Path="WindDirection"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                            <TextBlock Text="Ветер" FontSize="11"
+                                                       Foreground="#546E7A" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Margin="4,0">
+                                    <Border BorderBrush="#1E3A5F" BorderThickness="0,1,0,0" Padding="8,14,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="💧" FontSize="20" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Humidity, StringFormat='{}{0}%'}"
+                                                       FontSize="14" Foreground="#ECEFF1"
+                                                       HorizontalAlignment="Center" Margin="0,6,0,2"/>
+                                            <TextBlock Text="Влажность" FontSize="11"
+                                                       Foreground="#546E7A" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Margin="4,0">
+                                    <Border BorderBrush="#1E3A5F" BorderThickness="0,1,0,0" Padding="8,14,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="🔵" FontSize="20" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Pressure, StringFormat='{}{0} мм'}"
+                                                       FontSize="14" Foreground="#ECEFF1"
+                                                       HorizontalAlignment="Center" Margin="0,6,0,2"/>
+                                            <TextBlock Text="Давление" FontSize="11"
+                                                       Foreground="#546E7A" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Margin="4,0,0,0">
+                                    <Border BorderBrush="#1E3A5F" BorderThickness="0,1,0,0" Padding="8,14,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="👁" FontSize="20" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Visibility, StringFormat='{}{0} км'}"
+                                                       FontSize="14" Foreground="#ECEFF1"
+                                                       HorizontalAlignment="Center" Margin="0,6,0,2"/>
+                                            <TextBlock Text="Видимость" FontSize="11"
+                                                       Foreground="#546E7A" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </UniformGrid>
+                        </Grid>
+                    </Border>
+
+                    <!-- Side Details Card -->
+                    <Border Grid.Column="2" Style="{StaticResource WeatherCard}">
+                        <StackPanel>
+                            <TextBlock Text="ДЕТАЛИ" FontSize="9" FontWeight="SemiBold"
+                                       Foreground="#37474F" Margin="0,0,0,16" LetterSpacing="1"/>
+
+                            <!-- Cloudiness Bar -->
+                            <StackPanel Margin="0,0,0,14">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="☁️ Облачность" FontSize="13" Foreground="#78909C"/>
+                                    <TextBlock Text="{Binding Cloudiness, StringFormat=' {0}%'}"
+                                               FontSize="13" Foreground="#ECEFF1" Margin="auto,0,0,0"/>
+                                </StackPanel>
+                                <ProgressBar Height="5" Value="{Binding Cloudiness}" Maximum="100"
+                                             Background="#1E3A5F" Foreground="#4FC3F7" BorderThickness="0"/>
+                            </StackPanel>
+
+                            <!-- Humidity Bar -->
+                            <StackPanel Margin="0,0,0,14">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="💧 Влажность" FontSize="13" Foreground="#78909C"/>
+                                    <TextBlock Text="{Binding Humidity, StringFormat=' {0}%'}"
+                                               FontSize="13" Foreground="#ECEFF1" Margin="auto,0,0,0"/>
+                                </StackPanel>
+                                <ProgressBar Height="5" Value="{Binding Humidity}" Maximum="100"
+                                             Background="#1E3A5F" Foreground="#29B6F6" BorderThickness="0"/>
+                            </StackPanel>
+
+                            <Separator Background="#1E3A5F" Margin="0,6,0,16"/>
+
+                            <!-- Sun -->
+                            <TextBlock Text="СОЛНЦЕ" FontSize="9" FontWeight="SemiBold"
+                                       Foreground="#37474F" Margin="0,0,0,12" LetterSpacing="1"/>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                    <TextBlock Text="🌅" FontSize="30" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding SunriseTime}" FontSize="18"
+                                               Foreground="#FFD54F" HorizontalAlignment="Center" Margin="0,6,0,2"/>
+                                    <TextBlock Text="Рассвет" FontSize="11"
+                                               Foreground="#546E7A" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                    <TextBlock Text="🌇" FontSize="30" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding SunsetTime}" FontSize="18"
+                                               Foreground="#FF8F00" HorizontalAlignment="Center" Margin="0,6,0,2"/>
+                                    <TextBlock Text="Закат" FontSize="11"
+                                               Foreground="#546E7A" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Separator Background="#1E3A5F" Margin="0,0,0,16"/>
+
+                            <!-- Wind Detail -->
+                            <TextBlock Text="ВЕТЕР" FontSize="9" FontWeight="SemiBold"
+                                       Foreground="#37474F" Margin="0,0,0,12" LetterSpacing="1"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding WindSpeed, StringFormat='{}{0:0.#}'}"
+                                               FontSize="30" Foreground="#4FC3F7"
+                                               HorizontalAlignment="Center" FontWeight="Light"/>
+                                    <TextBlock Text="м/с" FontSize="12" Foreground="#546E7A"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Скорость" FontSize="11" Foreground="#37474F"
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding WindDirection}"
+                                               FontSize="30" Foreground="#4FC3F7"
+                                               HorizontalAlignment="Center" FontWeight="Light"/>
+                                    <TextBlock Text="направление" FontSize="11"
+                                               Foreground="#37474F" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- ── TEMPERATURE CHART ── -->
+                <Border Grid.Row="2" Style="{StaticResource WeatherCard}" Margin="0,0,0,20"
+                        Visibility="{Binding HasData, Converter={StaticResource BoolToVis}}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="230"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
+                            <TextBlock Text="📈" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Температура: прогноз на 48 часов"
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="#ECEFF1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <lvc:CartesianChart Grid.Row="1"
+                                            Series="{Binding TemperatureSeries}"
+                                            XAxes="{Binding XAxes}"
+                                            YAxes="{Binding YAxes}"
+                                            Background="Transparent"
+                                            LegendPosition="Hidden"
+                                            TooltipPosition="Top"/>
+                    </Grid>
+                </Border>
+
+                <!-- ── 5-DAY FORECAST ── -->
+                <Border Grid.Row="3" Style="{StaticResource WeatherCard}"
+                        Visibility="{Binding HasData, Converter={StaticResource BoolToVis}}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+                            <TextBlock Text="📅" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Прогноз на 5 дней"
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="#ECEFF1" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <ItemsControl Grid.Row="1" ItemsSource="{Binding DailyForecasts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ForecastCard}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="160"/>
+                                                <ColumnDefinition Width="56"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="130"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Date, Converter={StaticResource DateToDay}}"
+                                                       FontSize="14" Foreground="#ECEFF1"
+                                                       VerticalAlignment="Center" FontWeight="Medium"/>
+
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding WeatherEmoji}" FontSize="26"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding Description}"
+                                                       FontSize="13" Foreground="#78909C"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+
+                                            <StackPanel Grid.Column="3"
+                                                        Orientation="Horizontal"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="💧" FontSize="12" VerticalAlignment="Center"
+                                                           Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding PrecipitationChance, 
+                                                                  Converter={StaticResource PrecipFormat}}"
+                                                           FontSize="13" Foreground="#4FC3F7"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="4"
+                                                        Orientation="Horizontal"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding TempMin, Converter={StaticResource TempFormat}}"
+                                                           FontSize="14" Foreground="#546E7A" Margin="0,0,14,0"/>
+                                                <TextBlock Text="{Binding TempMax, Converter={StaticResource TempFormat}}"
+                                                           FontSize="14" FontWeight="SemiBold"
+                                                           Foreground="{Binding TempMax, Converter={StaticResource TempColor}}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>
